@@ -1,0 +1,226 @@
+version: '3.9'
+services:
+  kafka-1:
+    image: bitnami/kafka:latest
+    container_name: kafka-1
+    entrypoint: ["/bin/bash", "-c", "/opt/bitnami/kafka/bin/kafka-storage.sh format -t HRq4oB-7RoyAY2u6WvhEZg -c /opt/bitnami/kafka/config/kraft/server.properties && /opt/bitnami/kafka/bin/kafka-server-start.sh /opt/bitnami/kafka/config/kraft/server.properties"]
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    volumes:
+      - ./server.properties:/opt/bitnami/kafka/config/kraft/server.properties
+    networks:
+      - local-wallet
+    restart: on-failure
+
+  mysql-db1-client:
+    image: mysql
+    container_name: mysql-db1-client
+    environment:
+      MYSQL_DATABASE: client_db
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3307:3306"
+    volumes:
+      - client_db:/var/lib/mysql
+    networks:
+      - local-wallet
+
+  mysql-db2-login:
+    image: mysql
+    container_name: mysql-db2-login
+    environment:
+      MYSQL_DATABASE: login_db
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3308:3306"
+    volumes:
+      - login_db:/var/lib/mysql
+    networks:
+      - local-wallet
+
+  mysql-db3-account:
+    image: mysql
+    container_name: mysql-db3-account
+    environment:
+      MYSQL_DATABASE: account_db
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3309:3306"
+    volumes:
+      - account_db:/var/lib/mysql
+    networks:
+      - local-wallet
+
+  mysql-db4-activity:
+    image: mysql
+    container_name: mysql-db4-activity
+    environment:
+      MYSQL_DATABASE: activity_db
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3310:3306"
+    volumes:
+      - activity_db:/var/lib/mysql
+    networks:
+      - local-wallet
+
+  mysql-db5-transaction:
+    image: mysql
+    container_name: mysql-db5-transaction
+    environment:
+      MYSQL_DATABASE: transaction_db
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3311:3306"
+    volumes:
+      - transaction_db:/var/lib/mysql
+    networks:
+      - local-wallet
+
+  mysql-db6-reward:
+    image: mysql
+    container_name: mysql-db6-reward
+    environment:
+      MYSQL_DATABASE: reward_db
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3312:3306"
+    volumes:
+      - reward_db:/var/lib/mysql
+    networks:
+      - local-wallet
+
+  wallet-ms-eureka:
+    image: mraspa/wallet:wallet-ms-eureka
+    container_name: wallet-ms-eureka
+    depends_on:
+      - kafka-1
+    ports:
+      - "8761:8761"
+    networks:
+      - local-wallet
+    restart: on-failure
+
+  wallet-ms-gateway:
+    image: mraspa/wallet:wallet-ms-gateway
+    container_name: wallet-ms-gateway
+    depends_on:
+      - wallet-ms-eureka
+    ports:
+      - "8080:8080"
+    networks:
+      - local-wallet
+    restart: on-failure
+
+  wallet-ms-client:
+    image: mraspa/wallet:wallet-ms-client
+    container_name: wallet-ms-client
+    depends_on:
+      - wallet-ms-gateway
+      - mysql-db1-client
+    ports:
+      - "8081:8081"
+    networks:
+      - local-wallet
+    restart: on-failure
+
+  wallet-ms-aaa:
+    image: mraspa/wallet:wallet-ms-aaa
+    container_name: wallet-ms-aaa
+    depends_on:
+      - wallet-ms-gateway
+      - wallet-ms-client
+      - mysql-db2-login
+    ports:
+      - "8082:8082"
+    networks:
+      - local-wallet
+    restart: on-failure
+
+  wallet-ms-mail-sender:
+    image: mraspa/wallet:wallet-ms-mail-sender
+    container_name: wallet-ms-mail-sender
+    depends_on:
+      - wallet-ms-gateway
+      - wallet-ms-aaa
+    ports:
+      - "8084:8084"
+    networks:
+      - local-wallet
+    restart: on-failure
+
+  wallet-ms-account:
+    image: mraspa/wallet:wallet-ms-account
+    container_name: wallet-ms-account
+    depends_on:
+      - wallet-ms-gateway
+      - wallet-ms-mail-sender
+      - mysql-db3-account
+    ports:
+      - "8085:8085"
+    networks:
+      - local-wallet
+    restart: on-failure
+
+  wallet-ms-activity:
+    image: mraspa/wallet:wallet-ms-activity
+    container_name: wallet-ms-activity
+    depends_on:
+      - wallet-ms-gateway
+      - wallet-ms-account
+      - mysql-db4-activity
+    ports:
+      - "8089:8089"
+    networks:
+      - local-wallet
+    restart: on-failure
+
+  wallet-ms-cda:
+    image: mraspa/wallet:wallet-ms-cda
+    container_name: wallet-ms-cda
+    depends_on:
+      - wallet-ms-gateway
+      - wallet-ms-activity
+    ports:
+      - "8083:8083"
+    networks:
+      - local-wallet
+    restart: on-failure
+
+  wallet-ms-transaction:
+    image: mraspa/wallet:wallet-ms-transaction
+    container_name: wallet-ms-transaction
+    depends_on:
+      - wallet-ms-gateway
+      - wallet-ms-cda
+      - mysql-db5-transaction
+    ports:
+      - "8086:8086"
+    networks:
+      - local-wallet
+    restart: on-failure
+
+  wallet-ms-reward:
+    image: mraspa/wallet:wallet-ms-reward
+    container_name: wallet-ms-reward
+    depends_on:
+      - wallet-ms-gateway
+      - wallet-ms-transaction
+      - mysql-db6-reward
+    ports:
+      - "8087:8087"
+    networks:
+      - local-wallet
+    restart: on-failure
+
+volumes:
+  client_db:
+  login_db:
+  account_db:
+  activity_db:
+  transaction_db:
+  reward_db:
+
+networks:
+  local-wallet:
