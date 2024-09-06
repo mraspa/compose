@@ -213,6 +213,20 @@ services:
     networks:
       - local-wallet
     restart: on-failure
+  
+  wallet-ms-chatbot:
+    image: mraspa/wallet:wallet-ms-chatbot
+    container_name: wallet-ms-chatbot
+    depends_on:
+      - wallet-ms-reward
+    ports:
+      - "9000:9000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: ["/start.sh"]
+    networks:
+      - local-wallet
+    restart: on-failure
 
 volumes:
   client_db:
